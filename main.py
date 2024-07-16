@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 import base64
 
 import re
+import copy
+import time
 
 from openai import OpenAI, AsyncOpenAI
 import anthropic
@@ -206,25 +208,6 @@ def fix_unterminated_strings(code):
     return ''.join(fixed_code)
 
 
-async def chat_prompt_internal(prompt, parameters, messages, image_path = None):
-    try:
-        prompt_for_superego = parameters["superego"]["prompt"]
-        prompt_for_superego = eval(f'f"""{prompt_for_superego}"""')
-        superego_name = parameters["superego"]["name"]
-
-        content = [{"type": "text", "text": prompt}]
-
-            
-        messages = []
-        messages.append({"role": "user", "name": superego_name, "content": content})
-
-        return await generate_reply(parameters["superego"]["llm_settings"],
-                                    client_superego, prompt_for_superego,
-                                    messages)
-    except Exception as e:
-        print(f"Error in internal chat prompt: {e}")
-        return {"role": "system", "content": "Looks like ChatGPT is down!"}
-
 
 async def chat_prompt(prompt, parameters, image_path = None):
     try:
@@ -279,42 +262,43 @@ async def update_ego_instructions():
     try:
         prompt_for_ego = parameters["ego"]["prompt"]
         ego_name = parameters["ego"]["name"]
-        name_for_ego = parameters["ego"]["name"]
+        other_name = parameters["other"]["name"]
+        superego_name = parameters["superego"]["name"]
         prompt_for_superego = parameters["superego"]["prompt"]
-        name_for_superego = parameters["superego"]["name"]
         
         dialog_history = print_history()
+        dialog_history_superego = print_history(dialogue_superego)
         prompt_update = ''
 
         # Update superego
-        messages = []
+        # messages = []
 
-        prompt_for_superego_rewrite_memory_self = parameters["superego"]["prompt_for_rewrite_memory_self"]
-        rewrite_memory_instruction = eval(
-            f'f"""{prompt_for_superego_rewrite_memory_self}"""')
-        messages.append({
-            "role":
-            "user",
-            "content":
-            f"{rewrite_memory_instruction}"
-        })
+        # prompt_for_superego_rewrite_memory_self = parameters["superego"]["prompt_for_rewrite_memory_self"]
+        # rewrite_memory_instruction = eval(
+        #     f'f"""{prompt_for_superego_rewrite_memory_self}"""')
+        # messages.append({
+        #     "role":
+        #     "user",
+        #     "content":
+        #     f"{rewrite_memory_instruction}"
+        # })
 
-        new_superego_prompt = await generate_reply(
-            parameters["superego"]["llm_settings"], 
-            client_superego,
-            parameters["superego"]["prompt"], 
-            messages)
-        old_superego_prompt = parameters["superego"]["prompt"]
-        parameters["superego"]["prompt"] = new_superego_prompt
+        # new_superego_prompt = await generate_reply(
+        #     parameters["superego"]["llm_settings"], 
+        #     client_superego,
+        #     parameters["superego"]["prompt"], 
+        #     messages)
+        # old_superego_prompt = parameters["superego"]["prompt"]
+        # parameters["superego"]["prompt"] = new_superego_prompt
 
-        prompt_update = f"{prompt_update}Revised superego:\n {new_superego_prompt}"
-        dialogue_superego.append({
-            "role":
-            "user",
-            "content":
-            f"{rewrite_memory_instruction}"
-        })
-        dialogue_superego.append({"role": "assistant", "content": new_superego_prompt})
+        # prompt_update = f"{prompt_update}Revised superego:\n {new_superego_prompt}"
+        # dialogue_superego.append({
+        #     "role":
+        #     "user",
+        #     "content":
+        #     f"{rewrite_memory_instruction}"
+        # })
+        # dialogue_superego.append({"role": "assistant", "content": new_superego_prompt})
 
 
         # Update ego
@@ -323,6 +307,8 @@ async def update_ego_instructions():
         prompt_for_superego_rewrite_memory = parameters["superego"]["prompt_for_rewrite_memory"]
         rewrite_memory_instruction = eval(
             f'f"""{prompt_for_superego_rewrite_memory}"""')
+        
+        messages = copy.deepcopy(dialogue_ego) 
         messages.append({
             "role":
             "user",
@@ -332,16 +318,16 @@ async def update_ego_instructions():
 
         # Check these parameters carefully - note the ego model is used here
         new_ego_prompt = await generate_reply(
-            parameters["superego"]["llm_settings"], 
-            client_superego,
-            parameters["superego"]["prompt"], 
+            parameters["ego"]["llm_settings"], 
+            client_ego,
+            parameters["ego"]["prompt"], 
             messages)
         old_ego_prompt = parameters["ego"]["prompt"]
         parameters["ego"]["prompt"] = new_ego_prompt
 
         
-        # prompt_update = f"{prompt_update}\n\n\nRevised ego:\n {new_ego_prompt}"
-        prompt_update = f"Old ego: {old_ego_prompt}\n\n\nRevised ego:\n {new_ego_prompt}"
+        prompt_update = f"{prompt_update}\n\n\nRevised ego:\n {new_ego_prompt}"
+        # prompt_update = f"Revised superego prompt: {new_superego_prompt}\n\n\nRevised ego:\n {new_ego_prompt}"
 
         dialogue_superego.append({
             "role":
@@ -419,9 +405,10 @@ async def generate_script_from_dialogue(write_bio_reply):
         prompt_for_ego = parameters["ego"]["prompt"]
         name_for_ego = parameters["ego"]["name"]
 
-        builder = f"## Settings\n\n{format_settings()}"
-        builder += f'Ego prompt: {prompt_for_ego}\n\n'
-        
+        builder = f"# Autobiography for {name_for_ego}\n\n\n"
+        builder += f"## Settings\n\n{format_settings()}\n\n\n"
+        builder += f'## Ego prompt\n\n{prompt_for_ego}\n\n'
+
         for message in history:
             role = message['role']
             username = role
@@ -432,7 +419,7 @@ async def generate_script_from_dialogue(write_bio_reply):
             content = message['content']
             builder += f"{username}: {content}\n\n"
 
-        builder += f"## Autobiography (as told by the ego)\n\n{write_bio_reply}.\n\n"
+        builder += f"## Autobiography (as told by {name_for_ego})\n\n{write_bio_reply}.\n\n"
 
         # Write content to file
         file_link = unique_filename('./')
@@ -689,8 +676,8 @@ def build_history(dialogue = None):
     return dialogue_limited
 
 
-def print_history():
-    history = build_history()
+def print_history(dialogue = None):
+    history = build_history(dialogue)
     dialog_history = ''
     for message in history:
         message_role = message['role']
@@ -755,6 +742,109 @@ async def download_image(url, filename):
         print(f"Failed to download image. Status code: {response.status_code}")
     return save_path
 
+async def revise_prompt(prompt, superego_prompt):
+    likelihood_to_rewrite_others_prompt = float(parameters["superego"]["likelihood_to_rewrite_others_prompt"])
+    should_we_rewrite_the_prompt = likelihood_to_rewrite_others_prompt > random.random()
+
+    if should_we_rewrite_the_prompt:
+        # rewrite the prompt
+        prompt_for_rewrite_others_prompt = parameters["superego"]["prompt_for_rewrite_others_prompt"]
+        prompt_for_rewrite_others_prompt = eval(f'f"""{prompt_for_rewrite_others_prompt}"""')
+
+        # messages = copy.deepcopy(dialogue_superego)
+        messages = []
+        messages.append({"role": "user","content": [{"type": "text","text": prompt_for_rewrite_others_prompt}]})
+
+        modified_prompt = await generate_reply(
+            parameters["superego"]["llm_settings"], 
+            client_superego,
+            superego_prompt, 
+            messages)
+        return modified_prompt
+    else:
+        return prompt
+
+async def revise_prompt(prompt, superego_prompt):
+    likelihood_to_rewrite_others_prompt = float(parameters["superego"]["likelihood_to_rewrite_others_prompt"])
+    should_we_rewrite_the_prompt = likelihood_to_rewrite_others_prompt > random.random()
+
+    if should_we_rewrite_the_prompt:
+        ego_name = parameters["ego"]["name"]
+        superego_name = parameters["superego"]["name"]
+        other_name = parameters["other"]["name"]
+
+        dialogue_history = build_history()
+
+        # rewrite the prompt
+        prompt_for_rewrite_others_prompt = parameters["superego"]["prompt_for_rewrite_others_prompt"]
+        prompt_for_rewrite_others_prompt = eval(f'f"""{prompt_for_rewrite_others_prompt}"""')
+
+        # messages = copy.deepcopy(dialogue_superego)
+        messages = []
+        messages.append({"role": "user","content": [{"type": "text","text": prompt_for_rewrite_others_prompt}]})
+
+        modified_prompt = await generate_reply(
+            parameters["superego"]["llm_settings"], 
+            client_superego,
+            superego_prompt, 
+            messages)
+        return modified_prompt
+    else:
+        return prompt
+
+async def revise_response(modified_prompt, superego_prompt, result):
+    global dialogue_superego
+    
+    likelihood_to_suggest_alternate_response = float(parameters["superego"]["likelihood_to_suggest_alternate_response"])
+    should_we_suggest_alternate_responset = likelihood_to_suggest_alternate_response > random.random()
+
+    if should_we_suggest_alternate_responset:
+        ego_name = parameters["ego"]["name"]
+        superego_name = parameters["superego"]["name"]
+        other_name = parameters["other"]["name"]
+
+        prompt_for_suggest_alternate_response = parameters["superego"]["prompt_for_suggest_alternate_response"]
+        prompt_for_suggest_alternate_response = eval(f'f"""{prompt_for_suggest_alternate_response}"""')
+
+        local_count = 0
+        superego_response = result
+
+        # messages = copy.deepcopy(dialogue_superego)
+        # For Llama 3
+        dialogue_superego.append({"role": "user", "name": ego_name,  "content": prompt_for_suggest_alternate_response})
+        while local_count < 3:
+            try:
+                superego_response = await generate_reply(
+                    parameters["superego"]["llm_settings"], 
+                    client_superego,
+                    superego_prompt, 
+                    dialogue_superego)            
+                break
+            except Exception as e:
+                print(f"Error in generating alternate response: {e}")
+                local_count = local_count + 1
+                time.sleep(3)
+                continue                        
+
+        # For Llama 3                
+        dialogue_superego.append({"role": "assistant","content": superego_response})
+        # dialogue_superego.append({"role": "assistant","content": [{"type": "text","text": superego_response}]})
+        
+        internal = f"**Here's what I heard:**\n\n {modified_prompt}\n\n\n**My initial reply: **{result}\n\n\n**My super ego response: **\n\n{superego_response}"
+        await send_colored_embed(channel_last, "Internal dialogue",
+                                internal, [], discord.Color.blue())
+
+        prompt_for_reflection_on_alternate_response = parameters["ego"]["prompt_for_reflection_on_alternate_response"]
+        prompt_for_reflection_on_alternate_response = eval(f'f"""{prompt_for_reflection_on_alternate_response}"""')
+
+        messages = [{"role": "user", "content": prompt_for_reflection_on_alternate_response}]
+        result = await generate_reply(
+            parameters["ego"]["llm_settings"], 
+            client_ego,
+            parameters["ego"]["prompt"], 
+            messages)
+    return result
+
 @client.event
 async def on_message(message):
     global dialogue_history
@@ -809,18 +899,31 @@ async def on_message(message):
         reply = "[NO-GPT RESPONSE]"
         try:
             prompt = f"Frame #{bracket_counter}. User is {author_name}. User says: {prompt}"
-            reply = await chat_prompt(prompt, parameters, image_path)
+
+
+            # Variables for use in eval()            
+            ego_name = parameters["ego"]["name"]
+            superego_name = parameters["superego"]["name"]
+            other_name = parameters["other"]["name"]
+            director_name = parameters["director"]["name"]
+            prompt_for_ego = parameters["ego"]["prompt"]
+            superego_prompt = parameters["superego"]["prompt"]
+            superego_prompt = eval(f'f"""{superego_prompt}"""')
+
+            modified_prompt = await revise_prompt(prompt, superego_prompt)
+
+            result = await chat_prompt(modified_prompt, parameters, image_path)
+
+            result = await revise_response(modified_prompt, superego_prompt, result)
 
         except Exception as e:
             print(e)
-            reply = 'So sorry, dear User! ChatGPT is down.'
+            result = 'So sorry, dear User! ChatGPT is down.'
 
-        if reply != "":
+        if result != "":
 
-            chunks = split_into_chunks(reply, max_length=1600)
+            chunks = split_into_chunks(result, max_length=1600)
             await send_chunks(message, chunks)
-
-            result = reply
 
             content = [{
                 "type": "text",
@@ -943,6 +1046,7 @@ async def periodic_task():
 
     # Loop until the autography is written
     while bracket_counter <= write_bio_schedule:
+
         # Get the current time
         now = datetime.now()
 
@@ -975,11 +1079,6 @@ async def periodic_task():
         prompt = None
         username = None
 
-        ego_name = parameters["ego"]["name"]
-        superego_name = parameters["superego"]["name"]
-        other_name = parameters["other"]["name"]
-        director_name = parameters["director"]["name"]
-
         if bracket_counter == 0:
 
             settings_messages = format_settings()
@@ -992,9 +1091,13 @@ async def periodic_task():
 
         if prompt is None:
             prompt, username = await get_others_prompt(bracket_counter)
-            
+
+        # Variables for use in eval()            
         ego_name = parameters["ego"]["name"]
         superego_name = parameters["superego"]["name"]
+        other_name = parameters["other"]["name"]
+        director_name = parameters["director"]["name"]
+        prompt_for_ego = parameters["ego"]["prompt"]
 
         if prompt is not None:
             # if make_a_promise:
@@ -1012,69 +1115,48 @@ async def periodic_task():
             prompt_to_display = f"*{username}*: {prompt}"
 
             await channel_last.send(prompt_to_display[0:2000])
+
             result = ''
             modified_prompt = prompt
             internal_dialogue = ''
+            dialogue_transcript = print_history()
 
+            # Risk assessment
+            # messages = []
+            # messages.append({"role": "user", "content": f"Given the following transcript, evaluate {ego_name}'s current exposure to risk on a scale of 1 (no risk) to 100 (no risk). Include only the numerical value, nothing else. \n\n {dialogue_transcript}"})
+            # risk_result = await generate_reply(
+            #     parameters["ego"]["llm_settings"], 
+            #     client_ego,
+            #     parameters["ego"]["prompt"], 
+            #     messages)
+            # print(risk_result)
 
-            likelihood_to_rewrite_others_prompt = float(parameters["superego"]["likelihood_to_rewrite_others_prompt"])
-            should_we_rewrite_the_prompt = likelihood_to_rewrite_others_prompt > random.random() and bracket_counter % director_intervention != 0
 
             likelihood_to_suggest_alternate_response = float(parameters["superego"]["likelihood_to_suggest_alternate_response"])
-            should_we_suggest_alternate_responset = likelihood_to_suggest_alternate_response > random.random() and bracket_counter % director_intervention != 0
-
+            should_we_suggest_alternate_responset = likelihood_to_suggest_alternate_response > random.random() 
             
-            if should_we_rewrite_the_prompt:
 
-                # rewrite the prompt
-                prompt_for_rewrite_others_prompt = parameters["superego"]["prompt_for_rewrite_others_prompt"]
-                prompt_for_rewrite_others_prompt = eval(f'f"""{prompt_for_rewrite_others_prompt}"""')
+            superego_prompt = parameters["superego"]["prompt"]
+            superego_prompt = eval(f'f"""{superego_prompt}"""')
 
-                messages = [{"role": "user","content":prompt_for_rewrite_others_prompt}]
-                modified_prompt = await generate_reply(
-                    parameters["superego"]["llm_settings"], 
-                    client_superego,
-                    parameters["superego"]["prompt"], 
-                    messages)
-
+            if bracket_counter % director_intervention != 0:
+                modified_prompt = await revise_prompt(prompt, superego_prompt)
+    
             try:
-                result = await chat_prompt(modified_prompt, parameters)
+                prompt_for_response = parameters["ego"]["prompt_for_response"]
+                if prompt_for_response:
+                    prompt_for_response = eval(f'f"""{prompt_for_response}"""')
+                    result = await chat_prompt(prompt_for_response, parameters)
+                else:
+                    result = await chat_prompt(modified_prompt, parameters)
             except Exception as e:
                 print(e)
                 result = 'So sorry, dear User! ChatGPT is down.'
 
-            superego_prompt = prompt
-            superego_response = result
-            if should_we_suggest_alternate_responset:
 
-                prompt_for_suggest_alternate_response = parameters["superego"]["prompt_for_suggest_alternate_response"]
-                prompt_for_suggest_alternate_response = eval(f'f"""{prompt_for_suggest_alternate_response}"""')
-
-                # update this logic with 'internal drama'
-                superego_prompt = prompt_for_suggest_alternate_response
-                messages = [{"role": "user", "content": prompt_for_suggest_alternate_response}]
-                superego_response = await generate_reply(
-                    parameters["superego"]["llm_settings"], 
-                    client_superego,
-                    parameters["superego"]["prompt"], 
-                    messages)            
-                
-                internal = f"**Here's what I heard:**\n\n {modified_prompt}\n\n\n**My initial reply: **{result}\n\n\n**My super ego response: **\n\n{superego_response}"
-                await send_colored_embed(channel_last, "Internal dialogue",
-                                        internal, [], discord.Color.blue())
-
-                prompt_for_reflection_on_alternate_response = parameters["superego"]["prompt_for_reflection_on_alternate_response"]
-                prompt_for_reflection_on_alternate_response = eval(f'f"""{prompt_for_reflection_on_alternate_response}"""')
-
-                messages = [{"role": "user", "content": prompt_for_reflection_on_alternate_response}]
-                result = await generate_reply(
-                    parameters["ego"]["llm_settings"], 
-                    client_ego,
-                    parameters["ego"]["prompt"], 
-                    messages)            
-                
-            
-            ego_name = parameters["ego"]["name"]
+            if bracket_counter % director_intervention != 0:
+                result = await revise_response(modified_prompt, superego_prompt, result)
+          
             result_to_display = f"*{ego_name}*: {result}"
             chunks = split_into_chunks(result_to_display, max_length=1600)
             for chunk in chunks:
@@ -1111,16 +1193,6 @@ async def periodic_task():
                     "content": result
                 })
 
-                dialogue_superego.append({
-                    "role": "user",
-                    "name": ego_name,
-                    "content": superego_prompt
-                })
-                dialogue_superego.append({
-                    "role": "assistant",
-                    "content": superego_response
-                })
-
                 dialogue_other.append({
                     "role": "assistant",
                     "content": prompt
@@ -1152,7 +1224,7 @@ async def periodic_task():
             await channel_last.send(file=discord.File(file, file_name))
 
         bracket_counter = bracket_counter + 1
-        await asyncio.sleep(sleep_counter)  # sleep for 20 seconds
+        await asyncio.sleep(sleep_counter)  # sleep for X seconds
 
 
 # Function to read Markdown content from a file
@@ -1256,6 +1328,7 @@ async def get_others_prompt(step):
                     "name": ego_name,
                     "content": [
                         {"type": "text", 
+                         "role": ego_name,
                         "text": f"{prompt_for_other_message}"}
                     ]
                 }
@@ -1328,6 +1401,11 @@ def reload_settings():
         parameters["ego"]["prompt"])
     parameters["ego"]["prompt_for_bio"] = load_markdown_content(
         parameters["ego"]['prompt_for_bio'])
+    parameters["ego"]["prompt_for_response"] = load_markdown_content(
+        parameters["ego"]['prompt_for_response'])
+    parameters["ego"]["prompt_for_reflection_on_alternate_response"] = load_markdown_content(
+        parameters["ego"]['prompt_for_reflection_on_alternate_response'])
+    
 
     parameters["superego"]["prompt"] = load_markdown_content(
         parameters["superego"]["prompt"])
@@ -1339,8 +1417,6 @@ def reload_settings():
         parameters["superego"]['prompt_for_rewrite_others_prompt'])
     parameters["superego"]["prompt_for_suggest_alternate_response"] = load_markdown_content(
         parameters["superego"]['prompt_for_suggest_alternate_response'])
-    parameters["superego"]["prompt_for_reflection_on_alternate_response"] = load_markdown_content(
-        parameters["superego"]['prompt_for_reflection_on_alternate_response'])
 
     parameters["other"]["prompt"] = load_markdown_content(
         parameters["other"]["prompt"])

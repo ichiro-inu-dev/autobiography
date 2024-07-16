@@ -13,10 +13,10 @@ You responded as follows:
 
 Your inner voice has made the following comment on this response:
 
-<improved_response>
+<commentary>
 {superego_response}. 
-</improved_response>
+</commentary>
 
-Pay close attention to the tone and substance of this comment. Revise your own response accordingly. 
+Reflect on this commentary, and amend your initial response.
 
-Important: Do not add parenthetical asides. Do not add lines like: "Here's a rewritten version of your response:"
+Important: Do not add parenthetical asides. Do not add lines like: "Here's a rewritten version of your response:" or "Here's a revised response:". Include only your improved response, as {ego_name}.

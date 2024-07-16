@@ -8,20 +8,24 @@
 
     
 
-    "sleep_counter": 1,
+    "sleep_counter": 20,
     "make_a_promise_likelihood": 0.0,
     "fulfil_a_promise_likelihood": 0.0,
     
 
     "ego": {
         "name": "Timothy",
-        "prompt": "drama/timothy_mischief.md",
+        "prompt": "drama/timothy/timothy_young_adult.md",
         "prompt_for_bio": "drama/generic_bio.md",
+        "prompt_for_response": "drama/timothy/timothy_ego_respond_with_explanation.md",
+        "prompt_for_reflection_on_alternate_response": "drama/timothy/timmy_reflection_on_alternate_response.md",
+
         "generate_images": false,
-        "write_bio_schedule": 21, 
+        "write_bio_schedule": 12, 
+
         "llm_settings": {
             "model":"llama3-8b-8192",
-            "max_tokens": 250,
+            "max_tokens": 512,
             "temperature": 1.0,
             "top_p": 1.0,
             "frequency_penalty": 2.0,
@@ -30,24 +34,23 @@
     },
     "superego": {
         "name": "Ben",
-        "prompt": "drama/ben_moderator.md",
-        "prompt_for_rewrite_memory": "drama/ben_rewrite_memory_3.md",
-        "prompt_for_rewrite_memory_self": "drama/ben_rewrite_memory_self.md",
+        "prompt": "drama/ben/ben_unconscious.md",
+        "prompt_for_rewrite_memory": "drama/timothy/timothy_rewrite_memory.md",
+        "prompt_for_rewrite_memory_self": "drama/ben/ben_rewrite_memory_self.md",
+        "rewrite_memory_schedule": 6,
 
-        "likelihood_to_rewrite_others_prompt": 0.3,
-        "prompt_for_rewrite_others_prompt": "drama/ben_rewrite_others_prompt.md",
+        "likelihood_to_rewrite_others_prompt": 1.0,
+        "prompt_for_rewrite_others_prompt": "drama/ben/ben_egoideal_explain_others_prompt.md",
 
         "likelihood_to_suggest_alternate_response": 1.0,
-        "prompt_for_suggest_alternate_response": "drama/ben_rewrite_others_prompt.md",
-        "prompt_for_reflection_on_alternate_response": "drama/timothy/timmy_reflection_on_alternate_response.md",
+        "prompt_for_suggest_alternate_response": "drama/ben/ben_egoideal_suggest_alternate_response.md",
 
-        "rewrite_memory_schedule": 21,
 
         "llm_settings": {
-            "model":"gpt-4o",
-            "stop_sequences": ["\n"],
-            "max_tokens": 500,
-            "temperature": 0.3,
+            "model":"llama3-8b-8192",
+            "stop_sequences": [],
+            "max_tokens": 512,
+            "temperature": 1.0,
             "top_p": 1.0,
             "frequency_penalty": 2.0,
             "presence_penalty": 2.0
@@ -55,14 +58,14 @@
     },
     "other": {
         "name": "Sasha",
-        "prompt": "drama/sasha_interviewer.md",
-        "prompt_for_message": "drama/sasha_interviewer_query.md",
+        "prompt": "drama/sasha/sasha_detective.md",
+        "prompt_for_message": "drama/sasha/sasha_offsider_query.md",
         "turn_limit": 5,
         "llm_settings": {
-            "model":"claude-3-5-sonnet-20240620",
+            "model":"gpt-4o",
             "stop_sequences": [],
-            "max_tokens": 250,
-            "temperature": 0.7,
+            "max_tokens": 256,
+            "temperature": 0.5,
             "top_p": 1.0,
             "frequency_penalty": 2.0,
             "presence_penalty": 2.0
@@ -70,15 +73,15 @@
     },
     "director": {
         "name": "Director",
-        "prompt": "drama/ashley_director_interview.md",
-        "prompt_for_director_instruction": "drama/ashley_director_instruction.md",
-        "prompt_for_director_image_generation": "drama/ashley_director_image_generation.md",
-        "intervention": 21,
+        "prompt": "drama/ashley/ashley_director_detective.md",
+        "prompt_for_director_instruction": "drama/ashley/ashley_director_instruction.md",
+        "prompt_for_director_image_generation": "drama/ashley/ashley_director_image_generation.md",
+        "intervention": 4,
         "director_script": "drama/script_none.json",
         "llm_settings": {
             "model":"claude-3-5-sonnet-20240620",
             "stop_sequences": [],
-            "max_tokens": 500,
+            "max_tokens": 256,
             "temperature": 1.0,
             "top_p": 1.0,
             "frequency_penalty": 2.0,

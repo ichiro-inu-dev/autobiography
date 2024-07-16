@@ -38,8 +38,8 @@
         "prompt_for_rewrite_others_prompt": "drama/ben_rewrite_others_prompt.md",
 
         "likelihood_to_suggest_alternate_response": 1.0,
-        "prompt_for_suggest_alternate_response": "drama/ben_rewrite_others_prompt.md",
-        "prompt_for_reflection_on_alternate_response": "drama/timothy/timmy_reflection_on_alternate_response.md",
+        "prompt_for_suggest_alternate_response": "drama/ben_suggest_alternate_response.md",
+        "prompt_for_reflection_on_alternate_response": "drama/jenny/jenny_reflection_on_alternate_response.md",
 
         "rewrite_memory_schedule": 21,
 

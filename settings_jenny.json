@@ -15,6 +15,7 @@
         "name": "Jenny",
         "prompt": "drama/jenny/jenny_middleaged.md",
         "prompt_for_bio": "drama/jenny/jenny_bio.md",
+        "prompt_for_reflection_on_alternate_response": "drama/jenny/jenny_reflection_on_alternate_response.md",
         "generate_images": false,
         "write_bio_schedule": 10, 
         "llm_settings": {
@@ -28,31 +29,30 @@
     },
     "superego": {
         "name": "Cleo",
-        "prompt": "drama/ben_inner_voice.md",
-        "prompt_for_rewrite_memory": "drama/ben_rewrite_memory_3.md",
-        "prompt_for_rewrite_memory_self": "drama/ben_rewrite_memory_self.md",
+        "prompt": "drama/cleo/cleo_moderator.md",
+        "prompt_for_rewrite_memory": "drama/cleo/cleo_rewrite_memory.md",
+        "prompt_for_rewrite_memory_self": "drama/cleo/cleo_rewrite_memory_self.md",
 
-        "likelihood_to_rewrite_others_prompt": 0.3,
-        "prompt_for_rewrite_others_prompt": "drama/ben_rewrite_others_prompt.md",
+        "likelihood_to_rewrite_others_prompt": 0.0,
+        "prompt_for_rewrite_others_prompt": "drama/cleo/cleo_rewrite_others_prompt.md",
 
-        "likelihood_to_suggest_alternate_response": 1.0,
-        "prompt_for_suggest_alternate_response": "drama/ben_suggest_alternate_response.md",
-        "prompt_for_reflection_on_alternate_response": "drama/jenny/jenny_reflection_on_alternate_response.md",
+        "likelihood_to_suggest_alternate_response": 0.0,
+        "prompt_for_suggest_alternate_response": "drama/cleo/cleo_suggest_alternate_response.md",
         
-        "rewrite_memory_schedule": 4,
+        "rewrite_memory_schedule": 20,
 
         "llm_settings": {
             "model":"claude-3-5-sonnet-20240620",
             "max_tokens": 512,
             "temperature": 1.0,
-            "frequency_penalty": 2.0,
-            "presence_penalty": 2.0
+            "frequency_penalty": 1.0,
+            "presence_penalty": 1.0
         }
     },
     "other": {
         "name": "Sasha",
-        "prompt": "drama/sasha_interviewer.md",
-        "prompt_for_message": "drama/sasha_interviewer_query.md",
+        "prompt": "drama/sasha/sasha_interviewer.md",
+        "prompt_for_message": "drama/sasha/sasha_interviewer_query.md",
         "llm_settings": {
             "model":"gpt-4o",
             "max_tokens": 256,
@@ -63,15 +63,15 @@
     },
     "director": {
         "name": "Director",
-        "prompt": "drama/ashley_director_interview.md",
-        "prompt_for_director_instruction": "drama/ashley_director_instruction.md",
-        "prompt_for_director_image_generation": "drama/ashley_director_image_generation.md",
+        "prompt": "drama/ashley/ashley_director_interview.md",
+        "prompt_for_director_instruction": "drama/ashley/ashley_director_instruction.md",
+        "prompt_for_director_image_generation": "drama/ashley/ashley_director_image_generation.md",
         "intervention": 20,
         "director_script": "drama/script_none.json",
         "llm_settings": {
             "model":"llama3-70b-8192",
             "stop_sequences": [],
-            "max_tokens": 250,
+            "max_tokens": 256,
             "temperature": 0.3,
             "frequency_penalty": 0.0,
             "presence_penalty": 0.0
