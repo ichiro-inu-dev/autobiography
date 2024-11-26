@@ -1,13 +1,12 @@
 {
 
-    "guild_id": "1015035862536437810",                 
+    "guild_id": "1302260730703384597",                 
     "discord_token_env_var": "DISCORD_BOTOKEN_TIMOTHY",
-    "channel_ids": [1244445094942343218],
+    "channel_ids": [1310853336542744616],
 
     "max_size_dialog": 400000,
 
     
-
     "sleep_counter": 20,
     "make_a_promise_likelihood": 0.0,
     "fulfil_a_promise_likelihood": 0.0,
