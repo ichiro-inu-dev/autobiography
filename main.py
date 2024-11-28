@@ -131,47 +131,47 @@ async def generate_reply(params, client, system_prompt, messages):
     model = params["model"]
     
     try:
-        if "claude" in model:
-            # Handle Claude model
-            if messages[0]["role"] == "system":
-                system_prompt = messages[0]["content"]
-                messages.pop(0)
-            for m in messages:
-                if 'name' in m:
-                    del m['name']
-                if isinstance(m['content'], list):                
-                    to_remove = -1            
-                    for index, c in enumerate(m['content']):
-                        if isinstance(c, dict) and c['type'] == 'image_url':
-                            to_remove = index
-                            break
-                    if to_remove > -1:
-                        m['content'].pop(to_remove)
+        # if "claude" in model:
+        #     # Handle Claude model
+        #     if messages[0]["role"] == "system":
+        #         system_prompt = messages[0]["content"]
+        #         messages.pop(0)
+        #     for m in messages:
+        #         if 'name' in m:
+        #             del m['name']
+        #         if isinstance(m['content'], list):                
+        #             to_remove = -1            
+        #             for index, c in enumerate(m['content']):
+        #                 if isinstance(c, dict) and c['type'] == 'image_url':
+        #                     to_remove = index
+        #                     break
+        #             if to_remove > -1:
+        #                 m['content'].pop(to_remove)
             
-            message = client.messages.create(
-                model=model,
-                system=system_prompt,
-                messages=messages,
-                max_tokens=params["max_tokens"],
-                temperature=params["temperature"],
-                stop_sequences=params["stop_sequences"]
-            )
-            reply = message.content[0].text
-        else:
-            # Use OllamaService for all other models
-            ollama = OllamaService("http://localhost:11434")
-            response = await ollama.generate_response(
-                model=model,
-                prompt=system_prompt,
-                # messages=messages,
-                # temperature=params["temperature"],
-                # max_tokens=params["max_tokens"],
-                # top_p=params["top_p"],
-                # top_k=params["top_k"]
-            )
+        #     message = client.messages.create(
+        #         model=model,
+        #         system=system_prompt,
+        #         messages=messages,
+        #         max_tokens=params["max_tokens"],
+        #         temperature=params["temperature"],
+        #         stop_sequences=params["stop_sequences"]
+        #     )
+        #     reply = message.content[0].text
+        # else:
+        # Use OllamaService for all other models
+        ollama = OllamaService("http://localhost:11434")
+        response = await ollama.generate_response(
+            model=model,
+            prompt=system_prompt,
+            # messages=messages,
+            # temperature=params["temperature"],
+            # max_tokens=params["max_tokens"],
+            # top_p=params["top_p"],
+            # top_k=params["top_k"]
+        )
 
-            #reply = message.content[0].text
-            reply =  response['response']
+        #reply = message.content[0].text
+        reply =  response['response']
         return reply
         
     except Exception as e:

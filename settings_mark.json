@@ -1,12 +1,13 @@
 {
 
     "guild_id": "1302260730703384597",                 
-    "discord_token_env_var": "DISCORD_BOTOKEN_TIMOTHY",
+    "discord_token_env_var": "DISCORD_BOTOKEN_MARK",
     "channel_ids": [1310853336542744616],
 
     "max_size_dialog": 400000,
 
     
+
     "sleep_counter": 20,
     "make_a_promise_likelihood": 0.0,
     "fulfil_a_promise_likelihood": 0.0,
@@ -78,7 +79,7 @@
         "intervention": 4,
         "director_script": "drama/script_none.json",
         "llm_settings": {
-            "model":"llama3.2",
+            "model":"incept5/llama3.1-claude",
             "stop_sequences": [],
             "max_tokens": 256,
             "temperature": 1.0,
