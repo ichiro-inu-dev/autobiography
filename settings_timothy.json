@@ -23,7 +23,7 @@
         "write_bio_schedule": 12, 
 
         "llm_settings": {
-            "model":"llama3-8b-8192",
+            "model":"llama3.2",
             "max_tokens": 512,
             "temperature": 1.0,
             "top_p": 1.0,
@@ -46,7 +46,7 @@
 
 
         "llm_settings": {
-            "model":"llama3-8b-8192",
+            "model":"llama3.2",
             "stop_sequences": [],
             "max_tokens": 512,
             "temperature": 1.0,
@@ -61,7 +61,7 @@
         "prompt_for_message": "drama/sasha/sasha_offsider_query.md",
         "turn_limit": 5,
         "llm_settings": {
-            "model":"gpt-4o",
+            "model":"llama3.2",
             "stop_sequences": [],
             "max_tokens": 256,
             "temperature": 0.5,
@@ -78,7 +78,7 @@
         "intervention": 4,
         "director_script": "drama/script_none.json",
         "llm_settings": {
-            "model":"claude-3-5-sonnet-20240620",
+            "model":"mistral",
             "stop_sequences": [],
             "max_tokens": 256,
             "temperature": 1.0,

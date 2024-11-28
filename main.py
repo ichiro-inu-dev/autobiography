@@ -24,6 +24,8 @@ from urllib.parse import quote
 from transformers import AutoTokenizer
 from datetime import datetime
 import random
+import httpx
+from services.ollama_service import OllamaService
 
 BOT_ON = True
 
@@ -127,46 +129,54 @@ async def generate_reply(params, client, system_prompt, messages):
     if "top_k" not in params:
         params["top_k"] = 1.0
     model = params["model"]
-    if "claude" in model:
-        if messages[0]["role"] == "system":
-            system_prompt = messages[0]["content"]
-            messages[0].delete(0)
-        for m in messages:
-            if 'name' in m:
-                del m['name']
-            # Ensure 'content' is a list
-            if isinstance(m['content'], list):                
-                to_remove = -1            
-                for index, c in enumerate(m['content']):
-                    if isinstance(c, dict) and  c['type'] == 'image_url':
-                        to_remove = index
-                        break
-                if to_remove > -1:
-                    m['content'].pop(to_remove)
-        
-        message = client.messages.create(model=model,
-                                         system=system_prompt,
-                                         messages=messages,
-                                         max_tokens=params["max_tokens"],
-                                         temperature=params["temperature"],
-                                            stop_sequences=params["stop_sequences"])
-        reply = message.content[0].text
-    else:
-        if messages[0]["role"] != "system":
-            messages.insert(0, {"role": "system", "content": system_prompt})
-        response = await client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=params["max_tokens"],
-            temperature=params["temperature"],
-            stop=params["stop_sequences"],
-            frequency_penalty=params["frequency_penalty"],
-            presence_penalty=params["presence_penalty"]
-        )
-        if response != 0:
-            reply = response.choices[0].message.content
+    
+    try:
+        if "claude" in model:
+            # Handle Claude model
+            if messages[0]["role"] == "system":
+                system_prompt = messages[0]["content"]
+                messages.pop(0)
+            for m in messages:
+                if 'name' in m:
+                    del m['name']
+                if isinstance(m['content'], list):                
+                    to_remove = -1            
+                    for index, c in enumerate(m['content']):
+                        if isinstance(c, dict) and c['type'] == 'image_url':
+                            to_remove = index
+                            break
+                    if to_remove > -1:
+                        m['content'].pop(to_remove)
+            
+            message = client.messages.create(
+                model=model,
+                system=system_prompt,
+                messages=messages,
+                max_tokens=params["max_tokens"],
+                temperature=params["temperature"],
+                stop_sequences=params["stop_sequences"]
+            )
+            reply = message.content[0].text
+        else:
+            # Use OllamaService for all other models
+            ollama = OllamaService("http://localhost:11434")
+            response = await ollama.generate_response(
+                model=model,
+                prompt=system_prompt,
+                # messages=messages,
+                # temperature=params["temperature"],
+                # max_tokens=params["max_tokens"],
+                # top_p=params["top_p"],
+                # top_k=params["top_k"]
+            )
 
-    return reply
+            #reply = message.content[0].text
+            reply =  response['response']
+        return reply
+        
+    except Exception as e:
+        print(f"Error in generate_reply: {str(e)}")
+        raise
 
 
 def detect_unterminated_strings(code):
@@ -1350,21 +1360,81 @@ async def get_others_prompt(step):
         print(error_message)
         return error_message, other_name
 
+class OllamaClient:
+    def __init__(self, base_url="http://localhost:11434"):
+        self.client = httpx.AsyncClient(base_url=base_url, timeout=30.0)
+        
+    async def messages(self, model, system, messages, **kwargs):
+        try:
+            # Normalize model name - remove ":latest" suffix if present
+            model_name = model.split(':')[0]
+            
+            # Format messages to include system prompt
+            formatted_messages = [{"role": "system", "content": system}]
+            for msg in messages:
+                content = msg["content"]
+                if isinstance(content, list):
+                    content = " ".join([item.get("text", "") if isinstance(item, dict) else str(item) for item in content])
+                formatted_messages.append({"role": msg["role"], "content": content})
+
+            print(f"Sending request to Ollama with model: {model_name}")
+            
+            response = await self.client.post("/api/chat", json={
+                "model": model_name,  # Use normalized model name
+                "messages": formatted_messages,
+                "stream": False,
+                "options": {
+                    "temperature": kwargs.get("temperature", 0.7),
+                    "top_p": kwargs.get("top_p", 1.0),
+                    "top_k": kwargs.get("top_k", 40),
+                    "num_predict": kwargs.get("max_tokens", 100)
+                }
+            })
+            
+            response.raise_for_status()  # Raise exception for bad status codes
+            
+            data = response.json()
+            if not data.get('response'):
+                raise Exception(f"No response in Ollama output: {data}")
+                
+            return type('Response', (), {
+                'content': [type('Content', (), {'text': data['response']})()]
+            })
+                
+        except httpx.HTTPError as e:
+            raise Exception(f"HTTP error calling Ollama API: {str(e)}")
+        except json.JSONDecodeError as e:
+            raise Exception(f"Invalid JSON response from Ollama: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Error calling Ollama API: {str(e)}")
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.client.aclose()
+
 def generate_client(model):
-    client = None
-    if 'claude-3' in model:
-        client = anthropic.Anthropic(
-            api_key=os.getenv('ANTHROPIC_API_KEY'))
-    elif 'gpt' in model:
-        client = AsyncOpenAI(
-            api_key=os.environ.get("OPENAI_API_KEY"))
-    elif 'llama3-' in model:
-        client = AsyncGroq(api_key=os.getenv('GROQ_API_KEY'))
-    else:
-        # Hardwired for the moment
-        client = AsyncOpenAI(
-            base_url="http://localhost:1234/v1", api_key="lm-studio")
-    return client
+    try:
+        client = None
+        if 'claude' in model:
+            client = OllamaClient()
+        elif 'gpt-' in model:
+            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        elif 'groq' in model.lower():
+            client = AsyncGroq(api_key=os.getenv('GROQ_API_KEY'))
+        else:
+            # Assume any other model is for Ollama
+            client = OllamaClient()
+            
+        if client is None:
+            raise Exception(f"Could not create client for model: {model}")
+            
+        return client
+        
+    except Exception as e:
+        print(f"Error generating client for model {model}: {str(e)}")
+        raise
 
 def reload_settings():
     global client_ego, client_superego, client_other, client_director
